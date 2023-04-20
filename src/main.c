@@ -1,36 +1,40 @@
-#include <avr/io.h>
-#include <util/delay.h>
 #include <avr/interrupt.h>
-#include <uartlib.h>
+#include <avr/io.h>
+#include <bme280.h>
+#include <bme280_access.h>
 #include <pin.h>
 #include <spi.h>
-
-#define READ _BV(7)
-#define CHIPVER 0xD0
+#include <string.h>
+#include <uartlib.h>
+#include <util/delay.h>
 
 int main(void)
 {
-    _delay_ms(200);
+	_delay_ms(200);
 
-    uart_init();
-    stdout = &uart_output;
-    stdin = &uart_input;
+	uart_init();
+	stdout = &uart_output;
+	stdin = &uart_input;
 
-    spi_driver spi_driver;
-    digital_pin csPin = {.dir = &DDRB, .value = &PORTB, .mask = _BV(2)};
-    spi_driver_init(&spi_driver, csPin);
-    spi_driver_init_master(&spi_driver, spi_mode_0, msb_first);
+	spi_driver spi_driver;
+	digital_pin csPin = {.dir = &DDRB, .value = &PORTB, .mask = _BV(2)};
+	spi_driver_init(&spi_driver, csPin);
 
-    spi_driver_start(&spi_driver);
-    spi_driver_transmit(CHIPVER | READ);
-    spi_driver_transmit(CHIPVER | READ);
-    char result = spi_driver_read();
+	bme280_p bme = bme280_init(&spi_driver);
+	if (!bme) {
+		printf("failed to alloc bme280_p");
+	} else {
+		int available = bme280_check_availability(bme);
+		printf("Bme is %s!\n",
+		       available
+			   ? "available"
+			   : "unavailable, check cables or SPI config");
+		int reset_succ = bme280_reset(bme);
+		printf("Reset %s!", reset_succ ? "succesfull" : "failed");
+	}
 
-    printf("result: 0x%02x", (int)result);
-
-    while (1)
-    {
-        _delay_ms(500);
-    }
-    return 0;
+	while (1) {
+		_delay_ms(500);
+	}
+	return 0;
 }
