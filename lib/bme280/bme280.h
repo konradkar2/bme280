@@ -12,5 +12,6 @@ void bme280_destroy(bme280_p acc);
 
 int bme280_check_availability(bme280_p bme);
 int bme280_reset(bme280_p bme);
+void bme280_load_coefficients(bme280_p bme);
 
 #endif

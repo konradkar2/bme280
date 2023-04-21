@@ -33,10 +33,12 @@ bme280_access_p bme280_access_init(spi_driver *spi_drv)
 void bme280_access_destroy(bme280_access_p acc)
 {
 	LOG();
-	free(acc);
+	if (acc) {
+		free(acc);
+	}
 }
 
-void bme280_access_read8(bme280_access_p acc, uint8_t addr, uint8_t *out)
+void bme280_access_read8(bme280_access_p acc, bme280_addr addr, uint8_t *out)
 {
 	LOG();
 	spi_driver_start(acc->spi_drv);
@@ -46,8 +48,8 @@ void bme280_access_read8(bme280_access_p acc, uint8_t addr, uint8_t *out)
 	spi_driver_stop(acc->spi_drv);
 }
 
-void bme280_access_read_n(bme280_access_p acc, uint8_t addr, uint8_t *out,
-			  size_t n)
+void bme280_access_read_n(bme280_access_p acc, bme280_addr addr, size_t n,
+			  uint8_t *out)
 {
 	LOG();
 	spi_driver_start(acc->spi_drv);
@@ -60,14 +62,15 @@ void bme280_access_read_n(bme280_access_p acc, uint8_t addr, uint8_t *out,
 	spi_driver_stop(acc->spi_drv);
 }
 
-void bme280_access_read16(bme280_access_p acc, uint8_t addr, uint16_t *out)
+void bme280_access_read16(bme280_access_p acc, bme280_addr addr, uint16_t *out)
 {
 	LOG();
 	(void)acc;
 	(void)addr;
 	(void)out;
 }
-void bme280_access_write(bme280_access_p acc, uint8_t addr, const uint8_t value)
+void bme280_access_write(bme280_access_p acc, bme280_addr addr,
+			 const uint8_t value)
 {
 	LOG();
 	spi_driver_start(acc->spi_drv);
