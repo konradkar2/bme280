@@ -1,5 +1,6 @@
 #include "spi.h"
 #include <stdio.h>
+#include <util/delay.h>
 
 #define LOG() printf("%s\n", __func__)
 
@@ -79,9 +80,8 @@ void spi_driver_init_master(spi_driver *drv, spi_mode spiMode, bit_order bitOrde
     spi_driver_set_bit_order(bitOrder);
 }
 
-void spi_driver_transmit(char cData)
+void spi_driver_transmit(uint8_t cData)
 {
-    LOG();
     /* Start transmission */
     SPDR = cData;
     /* Wait for transmission complete */
@@ -90,17 +90,19 @@ void spi_driver_transmit(char cData)
     }
 }
 
-char spi_driver_read()
+uint8_t spi_driver_read()
 {
-    char c = SPDR;
+    uint8_t c = SPDR;
     return c;
 }
 
 void spi_driver_start(spi_driver *drv)
 {
     set_low(&drv->cs_pin);
+     _delay_us(1);
 }
 void spi_driver_stop(spi_driver *drv)
 {
     set_high(&drv->cs_pin);
+    _delay_us(1);
 }

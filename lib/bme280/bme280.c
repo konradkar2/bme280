@@ -9,6 +9,7 @@
 #include <util/delay.h>
 
 #define LOG() printf("%s\n", __func__)
+#define LOG_BYTE(value) printf("%s: 0x%02x\n", #value, (unsigned)value)
 
 #define BME280_CHIP_VER (0x60)
 #define BME280_RESET_VALUE (0xB6)
@@ -38,10 +39,19 @@ struct coefficients {
 };
 typedef struct coefficients coefficients;
 
+struct control_registers {
+	uint8_t config;
+	uint8_t ctrl_meas;
+	uint8_t ctrl_hum;
+};
+typedef struct control_registers control_registers;
+
 struct bme280 {
 	bme280_access_p acc;
 	coefficients *coeffs;
 	bool coeffs_loaded;
+	int32_t t_fine;
+	control_registers ctrl_regs;
 };
 typedef struct bme280 bme280;
 
@@ -67,12 +77,12 @@ bme280_p bme280_init(spi_driver *spi_drv)
 	return bme;
 }
 
-void bme280_destroy(bme280_p acc)
+void bme280_destroy(bme280_p bme)
 {
-	if (acc) {
-		bme280_access_destroy(acc->acc);
-		free(acc->coeffs);
-		free(acc);
+	if (bme) {
+		bme280_access_destroy(bme->acc);
+		free(bme->coeffs);
+		free(bme);
 	}
 }
 
@@ -102,57 +112,223 @@ int bme280_reset(bme280_p bme)
 	return bme_available;
 }
 
+static size_t coeff_addr_to_idx(uint8_t addr)
+{
+	if (addr <= 0xA1)
+		return addr - 0x88;
+	else if (addr <= 0xE7)
+		return (addr - 0xE1) + 26;
+	else
+		exit(-1);
+}
+
+void bme280_set_mode(bme280_p bme, mode_t mode)
+{
+	switch (mode) {
+	case mode_sleep:
+		bme->ctrl_regs.ctrl_meas &= ~(0x03);
+		break;
+	case mode_force:
+		bme->ctrl_regs.ctrl_meas &= ~(0x2);
+		bme->ctrl_regs.ctrl_meas |= 0x1;
+		break;
+	case mode_normal:
+		bme->ctrl_regs.ctrl_meas |= 0x03;
+		break;
+	}
+	bme280_access_write(bme->acc, addr_ctrl_meas, bme->ctrl_regs.ctrl_meas);
+}
+
+void bme280_load_control_registers(bme280_p bme)
+{
+	uint8_t regs[4];
+	bme280_access_read_n(bme->acc, addr_ctrl_hum, sizeof regs, regs);
+	bme->ctrl_regs.ctrl_hum = regs[0];
+	// skip status register (regs[1])
+	bme->ctrl_regs.ctrl_meas = regs[2];
+	bme->ctrl_regs.config = regs[3];
+
+	LOG_BYTE(bme->ctrl_regs.ctrl_hum);
+	LOG_BYTE(bme->ctrl_regs.ctrl_meas);
+	LOG_BYTE(bme->ctrl_regs.config);
+}
+
+#define COEFF_IDX(addr) coeff_addr_to_idx(addr)
+
 void bme280_load_coefficients(bme280_p b)
 {
-	uint8_t c[42];
-	memset(c, 0, sizeof(c));
 
+	uint8_t c[42];
 	bme280_access_read_n(b->acc, addr_calib0_25, 26, c);
 	bme280_access_read_n(b->acc, addr_calib26_41, 16, c + 26);
+	for (int i = 0; i < 42; ++i)
+		printf("c[%d]: %02x, ", i, c[i]);
+	printf("\n");
 
-	size_t idx = 0;
-	b->coeffs->dig_T1 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
+	b->coeffs->dig_T1 =
+	    ((uint16_t)c[COEFF_IDX(0x89)] << 8) | c[COEFF_IDX(0x88)];
+	b->coeffs->dig_T2 =
+	    ((int16_t)c[COEFF_IDX(0x8B)] << 8) | c[COEFF_IDX(0x8A)];
+	b->coeffs->dig_T3 =
+	    ((int16_t)c[COEFF_IDX(0x8D)] << 8) | c[COEFF_IDX(0x8C)];
 
-	b->coeffs->dig_T2 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
+	b->coeffs->dig_P1 =
+	    ((uint16_t)c[COEFF_IDX(0x8F)] << 8) | c[COEFF_IDX(0x8E)];
+	b->coeffs->dig_P2 =
+	    ((int16_t)c[COEFF_IDX(0x91)] << 8) | c[COEFF_IDX(0x90)];
+	b->coeffs->dig_P3 =
+	    ((int16_t)c[COEFF_IDX(0x93)] << 8) | c[COEFF_IDX(0x92)];
+	b->coeffs->dig_P4 =
+	    ((int16_t)c[COEFF_IDX(0x95)] << 8) | c[COEFF_IDX(0x94)];
+	b->coeffs->dig_P5 =
+	    ((int16_t)c[COEFF_IDX(0x97)] << 8) | c[COEFF_IDX(0x96)];
+	b->coeffs->dig_P6 =
+	    ((int16_t)c[COEFF_IDX(0x99)] << 8) | c[COEFF_IDX(0x98)];
+	b->coeffs->dig_P7 =
+	    ((int16_t)c[COEFF_IDX(0x9B)] << 8) | c[COEFF_IDX(0x9A)];
+	b->coeffs->dig_P8 =
+	    ((int16_t)c[COEFF_IDX(0x9D)] << 8) | c[COEFF_IDX(0x9C)];
+	b->coeffs->dig_P9 =
+	    ((int16_t)c[COEFF_IDX(0x9F)] << 8) | c[COEFF_IDX(0x9E)];
 
-	b->coeffs->dig_T3 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-
-	b->coeffs->dig_P1 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-	b->coeffs->dig_P2 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-	b->coeffs->dig_P3 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-	b->coeffs->dig_P4 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-	b->coeffs->dig_P5 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-	b->coeffs->dig_P6 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-	b->coeffs->dig_P7 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-	b->coeffs->dig_P8 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-	b->coeffs->dig_P9 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-
-	b->coeffs->dig_H1 = c[idx];
-	idx += 1;
-	b->coeffs->dig_H2 = (c[idx + 1] << 8) | c[idx];
-	idx += 2;
-	b->coeffs->dig_H3 = c[idx];
-	idx += 1;
-
-	b->coeffs->dig_H4 = c[idx] << 4;
-	idx += 1;
-	b->coeffs->dig_H4 |= (c[idx] & 0b00001111);
-
-	b->coeffs->dig_H5 = (c[idx + 1] << 4) | c[idx] >> 4;
-	idx += 1;
-	b->coeffs->dig_H6 |= c[idx];
+	b->coeffs->dig_H1 = (uint8_t)c[COEFF_IDX(0xA1)];
+	b->coeffs->dig_H2 =
+	    ((int16_t)c[COEFF_IDX(0xE2)] << 8) | c[COEFF_IDX(0xE1)];
+	b->coeffs->dig_H3 = (uint8_t)c[COEFF_IDX(0xE3)];
+	b->coeffs->dig_H4 =
+	    ((int16_t)c[COEFF_IDX(0xE4)] << 4) | (c[COEFF_IDX(0xE5)] & 0x0F);
+	b->coeffs->dig_H5 =
+	    ((int16_t)c[COEFF_IDX(0xE6)] << 4) | c[COEFF_IDX(0xE5)] >> 4;
+	b->coeffs->dig_H6 = (int8_t)c[COEFF_IDX(0xE7)];
 
 	b->coeffs_loaded = true;
+}
+
+static uint8_t osr_to_value(osr_t osr)
+{
+	switch (osr) {
+	case osr_skip:
+		return 0;
+	case osr_1:
+		return 1;
+	case osr_2:
+		return 2;
+	case osr_4:
+		return 3;
+	case osr_8:
+		return 4;
+	case osr_16:
+	default:
+		return 5;
+	}
+}
+
+void bme280_set_osr_settings(bme280 *drv, bme280_osr_settings osr_settings)
+{
+	const uint8_t osrs_p_v = osr_to_value(osr_settings.press) << 2;
+	const uint8_t osrs_t_v = osr_to_value(osr_settings.temp) << 5;
+	const uint8_t osrs_h_v = osr_to_value(osr_settings.hum);
+
+	drv->ctrl_regs.config &= ~(0b11111100);
+	drv->ctrl_regs.ctrl_hum &= ~(0b00000111);
+
+	drv->ctrl_regs.config |= (osrs_t_v | osrs_p_v);
+	drv->ctrl_regs.ctrl_hum |= osrs_h_v;
+
+	bme280_access_write(drv->acc, addr_config, drv->ctrl_regs.config);
+	bme280_access_write(drv->acc, addr_ctrl_hum, drv->ctrl_regs.ctrl_hum);
+}
+
+typedef int32_t BME280_S32_t;
+typedef uint32_t BME280_U32_t;
+typedef int64_t BME280_S64_t;
+
+BME280_S32_t BME280_compensate_T_int32(bme280 *drv, BME280_S32_t adc_T)
+{
+	BME280_S32_t var1, var2, T;
+	var1 = ((((adc_T >> 3) - ((BME280_S32_t)drv->coeffs->dig_T1 << 1))) *
+		((BME280_S32_t)drv->coeffs->dig_T2)) >>
+	       11;
+	var2 = (((((adc_T >> 4) - ((BME280_S32_t)drv->coeffs->dig_T1)) *
+		  ((adc_T >> 4) - ((BME280_S32_t)drv->coeffs->dig_T1))) >>
+		 12) *
+		((BME280_S32_t)drv->coeffs->dig_T3)) >>
+	       14;
+	drv->t_fine = var1 + var2;
+	T = (drv->t_fine * 5 + 128) >> 8;
+	return T;
+}
+
+// Q24.8
+BME280_U32_t BME280_compensate_P_int64(bme280 *drv, BME280_S32_t adc_P)
+{
+	BME280_S64_t var1, var2, p;
+	var1 = ((BME280_S64_t)drv->t_fine) - 128000;
+	var2 = var1 * var1 * (BME280_S64_t)drv->coeffs->dig_P6;
+	var2 = var2 + ((var1 * (BME280_S64_t)drv->coeffs->dig_P5) << 17);
+	var2 = var2 + (((BME280_S64_t)drv->coeffs->dig_P4) << 35);
+	var1 = ((var1 * var1 * (BME280_S64_t)drv->coeffs->dig_P3) >> 8) +
+	       ((var1 * (BME280_S64_t)drv->coeffs->dig_P2) << 12);
+	var1 = (((((BME280_S64_t)1) << 47) + var1)) *
+		   ((BME280_S64_t)drv->coeffs->dig_P1) >>
+	       33;
+	if (var1 == 0) {
+		return 0; // avoid exception caused by division by zero
+	}
+	p = 1048576 - adc_P;
+	p = (((p << 31) - var2) * 3125) / var1;
+	var1 =
+	    (((BME280_S64_t)drv->coeffs->dig_P9) * (p >> 13) * (p >> 13)) >> 25;
+	var2 = (((BME280_S64_t)drv->coeffs->dig_P8) * p) >> 19;
+	p = ((p + var1 + var2) >> 8) +
+	    (((BME280_S64_t)drv->coeffs->dig_P7) << 4);
+	return (BME280_U32_t)p;
+}
+
+// Q22.10
+BME280_U32_t bme280_compensate_H_int32(bme280 *drv, BME280_S32_t adc_H)
+{
+	BME280_S32_t v_x1_u32r;
+	v_x1_u32r = (drv->t_fine - ((BME280_S32_t)76800));
+	v_x1_u32r =
+	    (((((adc_H << 14) - (((BME280_S32_t)drv->coeffs->dig_H4) << 20) -
+		(((BME280_S32_t)drv->coeffs->dig_H5) * v_x1_u32r)) +
+	       ((BME280_S32_t)16384)) >>
+	      15) *
+	     (((((((v_x1_u32r * ((BME280_S32_t)drv->coeffs->dig_H6)) >> 10) *
+		  (((v_x1_u32r * ((BME280_S32_t)drv->coeffs->dig_H3)) >> 11) +
+		   ((BME280_S32_t)32768))) >>
+		 10) +
+		((BME280_S32_t)2097152)) *
+		   ((BME280_S32_t)drv->coeffs->dig_H2) +
+	       8192) >>
+	      14));
+	v_x1_u32r =
+	    (v_x1_u32r - (((((v_x1_u32r >> 15) * (v_x1_u32r >> 15)) >> 7) *
+			   ((BME280_S32_t)drv->coeffs->dig_H1)) >>
+			  4));
+	v_x1_u32r = (v_x1_u32r < 0 ? 0 : v_x1_u32r);
+	v_x1_u32r = (v_x1_u32r > 419430400 ? 419430400 : v_x1_u32r);
+	return (BME280_U32_t)(v_x1_u32r >> 12);
+}
+
+bme280_reads bme280_read(bme280_p bme)
+{
+	size_t reads_size = (addr_hum_lsb - addr_press_msb) + 1;
+	uint8_t read_raw[reads_size];
+	bme280_access_read_n(bme->acc, addr_press_msb, reads_size, read_raw);
+
+	uint32_t adc_press = 0, adc_temp = 0, adc_hum = 0;
+	adc_press = ((uint32_t)read_raw[0] << 12) |
+		    ((uint32_t)read_raw[1] << 4) | ((uint32_t)read_raw[2] >> 4);
+	adc_temp = ((uint32_t)read_raw[3] << 12) |
+		   ((uint32_t)read_raw[4] << 4) | ((uint32_t)read_raw[5] >> 4);
+	adc_hum = ((uint32_t)read_raw[6] << 8) | ((uint32_t)read_raw[7] << 4);
+
+	bme280_reads res;
+	res.pressure = BME280_compensate_P_int64(bme, adc_press) / 256;
+	res.temperature = BME280_compensate_T_int32(bme, adc_temp) / 100;
+	res.humidity = bme280_compensate_H_int32(bme, adc_hum) / 1024;
+
+	return res;
 }

@@ -35,7 +35,7 @@ void spi_driver_init(spi_driver *drv, digital_pin cs_pin);
 void spi_driver_init_master(spi_driver *drv, spi_mode spiMode, bit_order bitOrder);
 void spi_driver_start(spi_driver *drv);
 void spi_driver_stop(spi_driver *drv);
-void spi_driver_transmit(char cData);
-char spi_driver_read();
+void spi_driver_transmit(uint8_t cData);
+uint8_t spi_driver_read();
 
 #endif

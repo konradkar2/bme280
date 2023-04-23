@@ -26,11 +26,33 @@ int main(void)
 	} else {
 		int available = bme280_check_availability(bme);
 		printf("Bme is %s!\n",
-		       available
-			   ? "available"
-			   : "unavailable, check cables or SPI config");
-		int reset_succ = bme280_reset(bme);
-		printf("Reset %s!", reset_succ ? "succesfull" : "failed");
+		       available ? "available"
+				 : "unavailable, check cables or SPI config");
+		if (available) {
+			int reset_succ = bme280_reset(bme);
+			printf("Reset %s!\n",
+			       reset_succ ? "succesfull" : "failed");
+			bme280_load_control_registers(bme);
+			bme280_load_coefficients(bme);
+			bme280_set_mode(bme, mode_normal);
+	
+			_delay_ms(50);
+			bme280_load_control_registers(bme);
+
+			bme280_osr_settings osr_settings = {
+			    .hum = osr_4, .press = osr_4, .temp = osr_4};
+			bme280_set_osr_settings(bme, osr_settings);
+			bme280_load_control_registers(bme);
+
+			bme280_reads reads;
+			while (1) {
+				reads = bme280_read(bme);
+				printf("T: %d, H: %d, P: %d\n",
+				       reads.temperature, reads.humidity,
+				       reads.pressure);
+				_delay_ms(2000);
+			}
+		}
 	}
 
 	while (1) {
