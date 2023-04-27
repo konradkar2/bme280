@@ -5,15 +5,33 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef enum mode_t { mode_sleep, mode_normal, mode_force } mode_t;
+/* measurement mode*/
+typedef enum mode_t {
+	mode_sleep  = 0x0,
+	mode_normal = 0x1,
+	mode_force  = 0x3
+} mode_t;
+
+/* Oversampling mode*/
 typedef enum osr_t {
-	osr_skip /*disables sensor*/,
-	osr_1,
-	osr_2,
-	osr_4,
-	osr_8,
-	osr_16
+	osr_skip = 0x0 /*disables sensor*/,
+	osr_1	 = 0x1,
+	osr_2	 = 0x2,
+	osr_4	 = 0x3,
+	osr_8	 = 0x4,
+	osr_16	 = 0x5
 } osr_t;
+
+typedef enum sb_t {
+	sb_0_5ms  = 0x0 /*disables sensor*/,
+	sb_65_5ms = 0x1,
+	sb_125ms  = 0x2,
+	sb_250ms  = 0x3,
+	sb_500ms  = 0x4,
+	sb_1000ms = 0x5,
+	sb_10ms	  = 0x6,
+	sb_20ms	  = 0x7,
+} sb_t;
 
 struct bme280_osr_settings {
 	osr_t temp;
@@ -40,7 +58,8 @@ void bme280_load_coefficients(bme280_p bme);
 void bme280_load_control_registers(bme280_p bme);
 void bme280_set_mode(bme280_p bme, mode_t mode);
 void bme280_set_osr_settings(bme280_p bme, bme280_osr_settings osr_settings);
+int bme280_set_standby(bme280_p bme, sb_t standby);
 
-bme280_reads bme280_read(bme280_p bme);
+int bme280_read(bme280_p bme, bme280_reads *reads);
 
 #endif
