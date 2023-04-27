@@ -49,6 +49,7 @@ struct control_registers {
 			uint8_t t_sb : 3;
 		};
 	} config;
+
 	union ctrl_meas {
 		uint8_t v;
 		struct {
@@ -57,7 +58,14 @@ struct control_registers {
 			uint8_t osrs_t : 3;
 		};
 	} ctrl_meas;
-	uint8_t ctrl_hum;
+
+	union ctrl_hum {
+		uint8_t v;
+		struct {
+			uint8_t osrs_h : 3;
+			uint8_t reserved : 5;
+		};
+	} ctrl_hum;
 };
 typedef struct control_registers control_registers;
 
@@ -134,8 +142,10 @@ static size_t coeff_addr_to_idx(uint8_t addr)
 		return addr - 0x88;
 	else if (addr <= 0xE7)
 		return (addr - 0xE1) + 26;
-	else
+	else {
+		fprintf(stderr, "%s: Mismatch between addr and idx", __func__);
 		exit(-1);
+	}
 }
 
 void bme280_set_mode(bme280_p bme, mode_t mode)
@@ -149,10 +159,24 @@ void bme280_set_mode(bme280_p bme, mode_t mode)
 int bme280_set_standby(bme280_p bme, sb_t standby)
 {
 	LOG();
-	if (bme->ctrl_regs.ctrl_meas.mode == mode_normal)
+	if (bme->ctrl_regs.ctrl_meas.mode == mode_normal) {
 		return 1;
+	}
 
 	bme->ctrl_regs.config.t_sb = standby;
+	bme280_access_write(bme->acc, addr_config, bme->ctrl_regs.config.v);
+
+	return 0;
+}
+
+int bme280_set_filter(bme280_p bme, filter_t filter)
+{
+	LOG();
+	if (bme->ctrl_regs.ctrl_meas.mode == mode_normal) {
+		return 1;
+	}
+
+	bme->ctrl_regs.config.filter = filter;
 	bme280_access_write(bme->acc, addr_config, bme->ctrl_regs.config.v);
 
 	return 0;
@@ -162,12 +186,12 @@ void bme280_load_control_registers(bme280_p bme)
 {
 	uint8_t regs[4];
 	bme280_access_read_n(bme->acc, addr_ctrl_hum, sizeof regs, regs);
-	bme->ctrl_regs.ctrl_hum = regs[0];
+	bme->ctrl_regs.ctrl_hum.v = regs[0];
 	// skip status register (regs[1])
 	bme->ctrl_regs.ctrl_meas.v = regs[2];
 	bme->ctrl_regs.config.v	   = regs[3];
 
-	LOG_BYTE(bme->ctrl_regs.ctrl_hum);
+	LOG_BYTE(bme->ctrl_regs.ctrl_hum.v);
 	LOG_BYTE(bme->ctrl_regs.ctrl_meas.v);
 	LOG_BYTE(bme->ctrl_regs.config.v);
 }
@@ -176,13 +200,11 @@ void bme280_load_control_registers(bme280_p bme)
 
 void bme280_load_coefficients(bme280_p b)
 {
+	LOG();
 
 	uint8_t c[42];
 	bme280_access_read_n(b->acc, addr_calib0_25, 26, c);
 	bme280_access_read_n(b->acc, addr_calib26_41, 16, c + 26);
-	for (int i = 0; i < 42; ++i)
-		printf("c[%d]: %02x, ", i, c[i]);
-	printf("\n");
 
 	b->coeffs->dig_T1 =
 	    ((uint16_t)c[COEFF_IDX(0x89)] << 8) | c[COEFF_IDX(0x88)];
@@ -229,9 +251,9 @@ void bme280_set_osr_settings(bme280 *drv, bme280_osr_settings osr_settings)
 	drv->ctrl_regs.ctrl_meas.osrs_t = osr_settings.temp;
 	drv->ctrl_regs.ctrl_meas.osrs_p = osr_settings.press;
 
-	drv->ctrl_regs.ctrl_hum = osr_settings.hum;
+	drv->ctrl_regs.ctrl_hum.osrs_h = osr_settings.hum;
 
-	bme280_access_write(drv->acc, addr_ctrl_hum, drv->ctrl_regs.ctrl_hum);
+	bme280_access_write(drv->acc, addr_ctrl_hum, drv->ctrl_regs.ctrl_hum.v);
 	bme280_access_write(drv->acc, addr_ctrl_meas,
 			    drv->ctrl_regs.ctrl_meas.v);
 }
@@ -257,7 +279,7 @@ BME280_S32_t BME280_compensate_T_int32(bme280 *drv, BME280_S32_t adc_T)
 }
 
 // Q24.8
-BME280_U32_t BME280_compensate_P_int64(bme280 *drv, BME280_S32_t adc_P)
+static BME280_U32_t BME280_compensate_P_int64(bme280 *drv, BME280_S32_t adc_P)
 {
 	BME280_S64_t var1, var2, p;
 	var1 = ((BME280_S64_t)drv->t_fine) - 128000;
@@ -282,8 +304,8 @@ BME280_U32_t BME280_compensate_P_int64(bme280 *drv, BME280_S32_t adc_P)
 	return (BME280_U32_t)p;
 }
 
-// Q22.10
-BME280_U32_t bme280_compensate_H_int32(bme280 *drv, BME280_S32_t adc_H)
+// return humidity in Q22.10
+static BME280_U32_t bme280_compensate_H_int32(bme280 *drv, BME280_S32_t adc_H)
 {
 	BME280_S32_t v_x1_u32r;
 	v_x1_u32r = (drv->t_fine - ((BME280_S32_t)76800));
@@ -315,7 +337,7 @@ int bme280_read(bme280_p bme, bme280_reads *reads)
 		return 1;
 	}
 
-	size_t reads_size = (addr_hum_lsb - addr_press_msb) + 1;
+	size_t reads_size = 8; // (addr_hum_lsb - addr_press_msb) + 1;
 	uint8_t read_raw[reads_size];
 	bme280_access_read_n(bme->acc, addr_press_msb, reads_size, read_raw);
 

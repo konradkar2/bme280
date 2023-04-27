@@ -23,7 +23,7 @@ typedef enum osr_t {
 } osr_t;
 
 typedef enum sb_t {
-	sb_0_5ms  = 0x0 /*disables sensor*/,
+	sb_0_5ms  = 0x0,
 	sb_65_5ms = 0x1,
 	sb_125ms  = 0x2,
 	sb_250ms  = 0x3,
@@ -32,6 +32,14 @@ typedef enum sb_t {
 	sb_10ms	  = 0x6,
 	sb_20ms	  = 0x7,
 } sb_t;
+
+typedef enum filter_t {
+	filter_off = 0x0,
+	filter_2   = 0x1,
+	filter_4   = 0x2,
+	filter_8   = 0x3,
+	filter_16  = 0x4,
+} filter_t;
 
 struct bme280_osr_settings {
 	osr_t temp;
@@ -58,8 +66,13 @@ void bme280_load_coefficients(bme280_p bme);
 void bme280_load_control_registers(bme280_p bme);
 void bme280_set_mode(bme280_p bme, mode_t mode);
 void bme280_set_osr_settings(bme280_p bme, bme280_osr_settings osr_settings);
-int bme280_set_standby(bme280_p bme, sb_t standby);
 
+/* fails when run in normal mode */
+int bme280_set_standby(bme280_p bme, sb_t standby);
+/* fails when run in normal mode */
+int bme280_set_filter(bme280_p bme, filter_t filter);
+
+/* fails if coefficients are not loaded*/
 int bme280_read(bme280_p bme, bme280_reads *reads);
 
 #endif
