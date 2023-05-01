@@ -14,61 +14,6 @@
 #define BME280_CHIP_VER (0x60)
 #define BME280_RESET_VALUE (0xB6)
 
-struct coefficients {
-	/*temperature*/
-	uint16_t dig_T1;
-	int16_t dig_T2;
-	int16_t dig_T3;
-	/* pressure*/
-	uint16_t dig_P1;
-	int16_t dig_P2;
-	int16_t dig_P3;
-	int16_t dig_P4;
-	int16_t dig_P5;
-	int16_t dig_P6;
-	int16_t dig_P7;
-	int16_t dig_P8;
-	int16_t dig_P9;
-	/* humidity*/
-	uint8_t dig_H1;
-	int16_t dig_H2;
-	uint8_t dig_H3;
-	int16_t dig_H4;
-	int16_t dig_H5;
-	int8_t dig_H6;
-};
-typedef struct coefficients coefficients;
-
-struct control_registers {
-	union config {
-		uint8_t v;
-		struct {
-			uint8_t spi3w_en : 1;
-			uint8_t reserved : 1;
-			uint8_t filter : 3;
-			uint8_t t_sb : 3;
-		};
-	} config;
-
-	union ctrl_meas {
-		uint8_t v;
-		struct {
-			uint8_t mode : 2;
-			uint8_t osrs_p : 3;
-			uint8_t osrs_t : 3;
-		};
-	} ctrl_meas;
-
-	union ctrl_hum {
-		uint8_t v;
-		struct {
-			uint8_t osrs_h : 3;
-			uint8_t reserved : 5;
-		};
-	} ctrl_hum;
-};
-typedef struct control_registers control_registers;
-
 struct bme280 {
 	bme280_access_p acc;
 	coefficients *coeffs;
@@ -191,9 +136,7 @@ void bme280_load_control_registers(bme280_p bme)
 	bme->ctrl_regs.ctrl_meas.v = regs[2];
 	bme->ctrl_regs.config.v	   = regs[3];
 
-	LOG_BYTE(bme->ctrl_regs.ctrl_hum.v);
-	LOG_BYTE(bme->ctrl_regs.ctrl_meas.v);
-	LOG_BYTE(bme->ctrl_regs.config.v);
+	print_control_registers(&bme->ctrl_regs);
 }
 
 #define COEFF_IDX(addr) coeff_addr_to_idx(addr)

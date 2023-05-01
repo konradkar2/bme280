@@ -24,7 +24,6 @@ bme280_access_p bme280_access_init(spi_driver *spi_drv);
 void bme280_access_destroy(bme280_access_p acc);
 
 void bme280_access_read8(bme280_access_p acc, bme280_addr addr, uint8_t *out);
-void bme280_access_read16(bme280_access_p acc, bme280_addr addr, uint16_t *out);
 void bme280_access_read_n(bme280_access_p acc, bme280_addr addr, size_t n,
 			  uint8_t *out);
 void bme280_access_write(bme280_access_p acc, bme280_addr addr, uint8_t value);

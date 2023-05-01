@@ -62,13 +62,6 @@ void bme280_access_read_n(bme280_access_p acc, bme280_addr addr, size_t n,
 	spi_driver_stop(acc->spi_drv);
 }
 
-void bme280_access_read16(bme280_access_p acc, bme280_addr addr, uint16_t *out)
-{
-	LOG();
-	(void)acc;
-	(void)addr;
-	(void)out;
-}
 void bme280_access_write(bme280_access_p acc, bme280_addr addr,
 			 const uint8_t value)
 {
