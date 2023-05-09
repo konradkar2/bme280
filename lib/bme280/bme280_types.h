@@ -112,13 +112,11 @@ struct control_registers {
 };
 typedef struct control_registers control_registers;
 
-int describe_config(const config *cfg, char *buff, size_t buffSize);
-int describe_ctrl_meas(const ctrl_meas *c_meas, char *buff, size_t buffSize);
-int describe_ctrl_hum(const ctrl_hum *c_hum, char *buff, size_t buffSize);
+int print_config(const config *cfg, FILE *file);
+int print_ctrl_meas(const ctrl_meas *c_meas, FILE *file);
+int print_ctrl_hum(const ctrl_hum *c_hum, FILE *file);
 
-int describe_control_registers(const control_registers *cr, char *buff,
-			       size_t buffSize);
-int print_control_registers(const control_registers *cr);
+int print_control_registers(const control_registers *cr, FILE *file);
 
 const char *mode_to_cstring(mode_t mode);
 const char *osr_to_cstring(osr_t osr);

@@ -1,6 +1,8 @@
 
 #include "bme280_types.h"
 
+#include <stdio.h>
+
 #define ENUM_CASE(item)                                                        \
 	case item:                                                             \
 		return #item
@@ -53,66 +55,42 @@ const char *filter_to_cstring(filter_t filter)
 	return "undefined";
 }
 
-int describe_config(const config *cfg, char *buff, size_t buffSize)
+int print_config(const config *cfg, FILE *file)
 {
-	return snprintf(
-	    buff, buffSize, "config: [t_sb: %s, filter: %s, spi3w_en: %s]",
-	    sb_to_cstring(cfg->t_sb), filter_to_cstring(cfg->filter),
-	    cfg->spi3w_en ? "true" : "false");
+	return fprintf(file, "config: [t_sb: %s, filter: %s, spi3w_en: %s]",
+		       sb_to_cstring(cfg->t_sb), filter_to_cstring(cfg->filter),
+		       cfg->spi3w_en ? "true" : "false");
 }
 
-int describe_ctrl_meas(const ctrl_meas *c_meas, char *buff, size_t buffSize)
+int print_ctrl_meas(const ctrl_meas *c_meas, FILE *file)
 {
-	return snprintf(
-	    buff, buffSize, "ctrl_meas: [osrs_t: %s, osrs_p: %s, mode: %s]",
-	    osr_to_cstring(c_meas->osrs_t), osr_to_cstring(c_meas->osrs_p),
-	    mode_to_cstring(c_meas->mode));
+	return fprintf(file, "ctrl_meas: [osrs_t: %s, osrs_p: %s, mode: %s]",
+		       osr_to_cstring(c_meas->osrs_t),
+		       osr_to_cstring(c_meas->osrs_p),
+		       mode_to_cstring(c_meas->mode));
 }
 
-int describe_ctrl_hum(const ctrl_hum *c_hum, char *buff, size_t buffSize)
+int print_ctrl_hum(const ctrl_hum *c_hum, FILE *file)
 {
-	return snprintf(buff, buffSize, "ctrl_hum: [osrs_h: %s]",
-			osr_to_cstring(c_hum->osrs_h));
+	return fprintf(file, "ctrl_hum: [osrs_h: %s]",
+		       osr_to_cstring(c_hum->osrs_h));
 }
 
-int describe_control_registers(const control_registers *cr, char *buff,
-			       size_t buffSize)
+int print_control_registers(const control_registers *cr, FILE *file)
 {
-	char buff_config[100]	 = {0};
-	char buff_ctrl_meas[100] = {0};
-	char buff_ctrl_hum[100]	 = {0};
+	int res = 0;
+	res |= fprintf(file, "%s: [\n", __func__);
 
-	int len;
-	len = describe_config(&cr->config, buff_config, sizeof buff_config);
-	if (len < 0 || len >= (int)sizeof buff_config) {
-		return -1;
-	}
+	res |= print_config(&cr->config, file);
+	fprintf(file, "\n");
 
-	len = describe_ctrl_meas(&cr->ctrl_meas, buff_ctrl_meas,
-				 sizeof buff_ctrl_meas);
-	if (len < 0 || len >= (int)sizeof buff_ctrl_meas) {
-		return -1;
-	}
+	res |= print_ctrl_meas(&cr->ctrl_meas, file);
+	fprintf(file, "\n");
+	
+	res |= print_ctrl_hum(&cr->ctrl_hum, file);
+	fprintf(file, "\n");
 
-	len = describe_ctrl_hum(&cr->ctrl_hum, buff_ctrl_hum,
-				sizeof buff_ctrl_hum);
-	if (len < 0 || len >= (int)sizeof buff_ctrl_hum) {
-		return -1;
-	}
+	res |= fprintf(file, "]\n");
 
-	return snprintf(buff, buffSize, "control registers: [%s, %s, %s]",
-			buff_config, buff_ctrl_meas, buff_ctrl_hum);
-}
-
-int print_control_registers(const control_registers *cr)
-{
-	int ret;
-	char buff[500] = {0};
-
-	ret = describe_control_registers(cr, buff, sizeof buff);
-	if (ret < 0 || ret >= (int)sizeof buff) {
-		return -1;
-	}
-
-	return printf("%s\n", buff);
+	return res;
 }

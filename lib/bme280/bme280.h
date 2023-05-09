@@ -12,9 +12,10 @@ typedef struct bme280 *bme280_p;
 bme280_p bme280_init(spi_driver *spi_drv);
 void bme280_destroy(bme280_p acc);
 
-int bme280_check_availability(bme280_p bme);
+int bme280_is_available(bme280_p bme);
 int bme280_reset(bme280_p bme);
 void bme280_load_coefficients(bme280_p bme);
+void bme280_read_control_registers(bme280_p bme);
 void bme280_load_control_registers(bme280_p bme);
 void bme280_set_mode(bme280_p bme, mode_t mode);
 void bme280_set_osr_settings(bme280_p bme, bme280_osr_settings osr_settings);

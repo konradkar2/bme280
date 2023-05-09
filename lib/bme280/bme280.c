@@ -9,7 +9,8 @@
 #include <util/delay.h>
 
 #define LOG() printf("%s\n", __func__)
-#define LOG_BYTE(value) printf("%s: 0x%02x\n", #value, (unsigned)value)
+#define LOG_BYTE(value)                                                        \
+	printf("%s: %s: 0x%02x\n", __func__, #value, (unsigned)value)
 
 #define BME280_CHIP_VER (0x60)
 #define BME280_RESET_VALUE (0xB6)
@@ -29,6 +30,7 @@ bme280_p bme280_init(spi_driver *spi_drv)
 	bme280_p bme = malloc(sizeof(*bme));
 
 	if (bme) {
+		// memset(&bme->ctrl_regs, 0, sizeof(control_registers));
 		bme->coeffs_loaded = false;
 		bme->acc	   = bme280_access_init(spi_drv);
 		if (!bme->acc) {
@@ -54,7 +56,7 @@ void bme280_destroy(bme280_p bme)
 	}
 }
 
-int bme280_check_availability(bme280_p bme)
+int bme280_is_available(bme280_p bme)
 {
 	LOG();
 	uint8_t value;
@@ -66,19 +68,23 @@ int bme280_check_availability(bme280_p bme)
 int bme280_reset(bme280_p bme)
 {
 	LOG();
+	bme280_set_mode(bme, mode_sleep);
 	bme280_access_write(bme->acc, addr_reset, BME280_RESET_VALUE);
 
-	int retries	  = 10;
-	int bme_available = 0;
-	do {
-		if (retries == 0)
-			break;
+	_delay_ms(15);
 
-		--retries;
-		_delay_ms(10);
-	} while (!(bme_available = bme280_check_availability(bme)));
+	if (!bme280_is_available(bme)) {
+		printf("bme280 not available");
+		return 1;
+	}
 
-	return bme_available;
+	uint8_t status = 0x01;
+	while (status & 0x01) {
+		bme280_access_read8(bme->acc, addr_status, &status);
+		LOG_BYTE(status);
+	}
+
+	return 0;
 }
 
 static size_t coeff_addr_to_idx(uint8_t addr)
@@ -93,12 +99,28 @@ static size_t coeff_addr_to_idx(uint8_t addr)
 	}
 }
 
+static void bme280_apply_ctrl_regs(bme280_p bme)
+{
+	bme280_set_mode(bme, mode_sleep);
+	/* BME280_datasheet - changing ctrl_meas has to be done
+	after a change to ctrl_hum */
+	bme280_access_write(bme->acc, addr_ctrl_hum, bme->ctrl_regs.ctrl_hum.v);
+	bme280_access_write(bme->acc, addr_ctrl_meas,
+			    bme->ctrl_regs.ctrl_meas.v);
+	bme280_access_write(bme->acc, addr_config, bme->ctrl_regs.config.v);
+}
+
 void bme280_set_mode(bme280_p bme, mode_t mode)
 {
 	LOG();
 	bme->ctrl_regs.ctrl_meas.mode = mode;
+
+	/* BME280_datasheet - changing ctrl_meas has to be done
+	after a change to ctrl_hum */
+	bme280_access_write(bme->acc, addr_ctrl_hum, bme->ctrl_regs.ctrl_hum.v);
 	bme280_access_write(bme->acc, addr_ctrl_meas,
 			    bme->ctrl_regs.ctrl_meas.v);
+	_delay_ms(1);
 }
 
 int bme280_set_standby(bme280_p bme, sb_t standby)
@@ -109,7 +131,7 @@ int bme280_set_standby(bme280_p bme, sb_t standby)
 	}
 
 	bme->ctrl_regs.config.t_sb = standby;
-	bme280_access_write(bme->acc, addr_config, bme->ctrl_regs.config.v);
+	bme280_apply_ctrl_regs(bme);
 
 	return 0;
 }
@@ -122,13 +144,24 @@ int bme280_set_filter(bme280_p bme, filter_t filter)
 	}
 
 	bme->ctrl_regs.config.filter = filter;
-	bme280_access_write(bme->acc, addr_config, bme->ctrl_regs.config.v);
+	bme280_apply_ctrl_regs(bme);
 
 	return 0;
 }
 
+void bme280_set_osr_settings(bme280 *bme, bme280_osr_settings osr_settings)
+{
+	LOG();
+	bme->ctrl_regs.ctrl_meas.osrs_t = osr_settings.temp;
+	bme->ctrl_regs.ctrl_meas.osrs_p = osr_settings.press;
+	bme->ctrl_regs.ctrl_hum.osrs_h	= osr_settings.hum;
+
+	bme280_apply_ctrl_regs(bme);
+}
+
 void bme280_load_control_registers(bme280_p bme)
 {
+	LOG();
 	uint8_t regs[4];
 	bme280_access_read_n(bme->acc, addr_ctrl_hum, sizeof regs, regs);
 	bme->ctrl_regs.ctrl_hum.v = regs[0];
@@ -136,7 +169,7 @@ void bme280_load_control_registers(bme280_p bme)
 	bme->ctrl_regs.ctrl_meas.v = regs[2];
 	bme->ctrl_regs.config.v	   = regs[3];
 
-	print_control_registers(&bme->ctrl_regs);
+	print_control_registers(&bme->ctrl_regs, stdout);
 }
 
 #define COEFF_IDX(addr) coeff_addr_to_idx(addr)
@@ -186,19 +219,6 @@ void bme280_load_coefficients(bme280_p b)
 	b->coeffs->dig_H6 = (int8_t)c[COEFF_IDX(0xE7)];
 
 	b->coeffs_loaded = true;
-}
-
-void bme280_set_osr_settings(bme280 *drv, bme280_osr_settings osr_settings)
-{
-	LOG();
-	drv->ctrl_regs.ctrl_meas.osrs_t = osr_settings.temp;
-	drv->ctrl_regs.ctrl_meas.osrs_p = osr_settings.press;
-
-	drv->ctrl_regs.ctrl_hum.osrs_h = osr_settings.hum;
-
-	bme280_access_write(drv->acc, addr_ctrl_hum, drv->ctrl_regs.ctrl_hum.v);
-	bme280_access_write(drv->acc, addr_ctrl_meas,
-			    drv->ctrl_regs.ctrl_meas.v);
 }
 
 typedef int32_t BME280_S32_t;

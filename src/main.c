@@ -14,7 +14,7 @@ int main(void)
 
 	uart_init();
 	stdout = &uart_output;
-	stdin = &uart_input;
+	stdin  = &uart_input;
 
 	spi_driver spi_driver;
 	digital_pin csPin = {.dir = &DDRB, .value = &PORTB, .mask = _BV(2)};
@@ -24,35 +24,46 @@ int main(void)
 	if (!bme) {
 		printf("failed to alloc bme280_p");
 	} else {
-		bme280_reset(bme);
+		if (bme280_reset(bme)) {
+			printf("%s: failed to reset bme280", __func__);
+		}
 		_delay_ms(10);
-		int available = bme280_check_availability(bme);
-		printf("Bme is %s!\n",
+		int available = bme280_is_available(bme);
+		printf("%s: Bme is %s!\n", __func__,
 		       available ? "available"
 				 : "unavailable, check cables or SPI config");
 		if (available) {
 			bme280_load_control_registers(bme);
 			bme280_load_coefficients(bme);
-			bme280_set_standby(bme, sb_20ms);
-			bme280_set_filter(bme, filter_8);
+			if (bme280_set_standby(bme, sb_20ms)) {
+				printf("%s: failed to set standby", __func__);
+			}
+
+			if (bme280_set_filter(bme, filter_4)) {
+				printf("%s: failed to set filter", __func__);
+			}
 			bme280_set_mode(bme, mode_normal);
 
 			bme280_osr_settings osr_settings = {
 			    .hum = osr_4, .press = osr_4, .temp = osr_4};
 			bme280_set_osr_settings(bme, osr_settings);
+
 			
-			_delay_ms(10);
 			bme280_load_control_registers(bme);
-			
+
 			bme280_set_mode(bme, mode_force);
 			bme280_set_mode(bme, mode_normal);
 
-			_delay_ms(10);
 			bme280_load_control_registers(bme);
 
 			bme280_reads reads;
 			while (1) {
-				bme280_read(bme, &reads);
+
+				if (bme280_read(bme, &reads)) {
+					printf("%s: bme280_read failed\n",
+					       __func__);
+				}
+
 				printf("T: %d, H: %d, P: %d\n",
 				       reads.temperature, reads.humidity,
 				       reads.pressure);

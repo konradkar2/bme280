@@ -6,15 +6,16 @@
 #include <stdint.h>
 
 enum bme280_addr {
-	addr_chip_ver = 0xD0,
-	addr_reset = 0xE0,
-	addr_calib0_25 = 0x88,
+	addr_chip_ver	= 0xD0,
+	addr_reset	= 0xE0,
+	addr_calib0_25	= 0x88,
 	addr_calib26_41 = 0xE1,
-	addr_config = 0xF5,
-	addr_ctrl_meas = 0xF4,
-	addr_ctrl_hum = 0xF2,
-	addr_press_msb = 0xF7,
-	addr_hum_lsb = 0xFE,
+	addr_config	= 0xF5,
+	addr_ctrl_meas	= 0xF4,
+	addr_status	= 0xF3,
+	addr_ctrl_hum	= 0xF2,
+	addr_press_msb	= 0xF7,
+	addr_hum_lsb	= 0xFE,
 };
 typedef enum bme280_addr bme280_addr;
 
