@@ -45,19 +45,17 @@ int main(void)
 			
 
 			bme280_osr_settings osr_settings = {
-			    .hum = osr_4, .press = osr_4, .temp = osr_8};
+			    .hum = osr_skip, .press = osr_4, .temp = osr_1};
 			bme280_set_osr_settings(bme, osr_settings);
 
 			_delay_ms(10);
 			bme280_read_control_registers(bme, stdout);
 
-			bme280_set_mode(bme, mode_force);
-			bme280_set_mode(bme, mode_normal);
 			bme280_set_mode(bme, mode_normal);
 
 			_delay_ms(10);
 			bme280_read_control_registers(bme, stdout);
-
+			
 			bme280_reads reads;
 			while (1) {
 
@@ -66,10 +64,10 @@ int main(void)
 					       __func__);
 				}
 
-				printf("T: %d, H: %d, P: %d\n",
+				printf("T: %ld, H: %lu, P: %lu\n",
 				       reads.temperature, reads.humidity,
 				       reads.pressure);
-				_delay_ms(2000);
+				_delay_ms(500);
 			}
 		}
 	}

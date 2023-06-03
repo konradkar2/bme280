@@ -47,9 +47,9 @@ struct bme280_osr_settings {
 typedef struct bme280_osr_settings bme280_osr_settings;
 
 struct bme280_reads {
-	int temperature;
-	int pressure;
-	int humidity;
+	int32_t temperature;
+	uint32_t pressure;
+	uint32_t humidity;
 };
 typedef struct bme280_reads bme280_reads;
 

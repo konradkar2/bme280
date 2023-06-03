@@ -205,7 +205,7 @@ void bme280_load_coefficients(bme280_p b)
 	    ((int16_t)c[COEFF_IDX(0x8D)] << 8) | c[COEFF_IDX(0x8C)];
 
 	b->coeffs->dig_P1 =
-	    ((uint16_t)c[COEFF_IDX(0x8F)] << 8) | c[COEFF_IDX(0x8E)];
+	    ((uint16_t)(c[COEFF_IDX(0x8F)] << 8) | c[COEFF_IDX(0x8E)]);
 	b->coeffs->dig_P2 =
 	    ((int16_t)c[COEFF_IDX(0x91)] << 8) | c[COEFF_IDX(0x90)];
 	b->coeffs->dig_P3 =
@@ -326,7 +326,7 @@ int bme280_read(bme280_p bme, bme280_reads *reads)
 		   ((uint32_t)read_raw[4] << 4) | ((uint32_t)read_raw[5] >> 4);
 	adc_hum = ((uint32_t)read_raw[6] << 8) | ((uint32_t)read_raw[7] << 4);
 
-	reads->pressure	   = BME280_compensate_P_int64(bme, adc_press) / 256;
+	reads->pressure	   = BME280_compensate_P_int64(bme, adc_press) /256;
 	reads->temperature = BME280_compensate_T_int32(bme, adc_temp) / 100;
 	reads->humidity	   = bme280_compensate_H_int32(bme, adc_hum) / 1024;
 
