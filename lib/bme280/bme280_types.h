@@ -6,8 +6,8 @@
 /* measurement mode*/
 typedef enum mode_t {
 	mode_sleep  = 0x0,
-	mode_normal = 0x1,
-	mode_force  = 0x3
+	mode_force = 0x1,
+	mode_normal  = 0x3,
 } mode_t;
 
 /* Oversampling mode*/

@@ -172,6 +172,21 @@ void bme280_load_control_registers(bme280_p bme)
 	print_control_registers(&bme->ctrl_regs, stdout);
 }
 
+void bme280_read_control_registers(bme280_p bme, FILE *file)
+{
+	LOG();
+	uint8_t regs[4];
+	bme280_access_read_n(bme->acc, addr_ctrl_hum, sizeof regs, regs);
+
+	control_registers cr;
+	cr.ctrl_hum.v = regs[0];
+	// skip status register (regs[1])
+	cr.ctrl_meas.v = regs[2];
+	cr.config.v    = regs[3];
+
+	print_control_registers(&cr, file);
+}
+
 #define COEFF_IDX(addr) coeff_addr_to_idx(addr)
 
 void bme280_load_coefficients(bme280_p b)

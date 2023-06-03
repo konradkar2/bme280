@@ -90,7 +90,8 @@ int print_control_registers(const control_registers *cr, FILE *file)
 	res |= print_ctrl_hum(&cr->ctrl_hum, file);
 	fprintf(file, "\n");
 
-	res |= fprintf(file, "]\n");
+	res |= fprintf(file, "]");
+	res |= fprintf(file, "\n");
 
 	return res;
 }

@@ -42,19 +42,21 @@ int main(void)
 			if (bme280_set_filter(bme, filter_4)) {
 				printf("%s: failed to set filter", __func__);
 			}
-			bme280_set_mode(bme, mode_normal);
+			
 
 			bme280_osr_settings osr_settings = {
-			    .hum = osr_4, .press = osr_4, .temp = osr_4};
+			    .hum = osr_4, .press = osr_4, .temp = osr_8};
 			bme280_set_osr_settings(bme, osr_settings);
 
-			
-			bme280_load_control_registers(bme);
+			_delay_ms(10);
+			bme280_read_control_registers(bme, stdout);
 
 			bme280_set_mode(bme, mode_force);
 			bme280_set_mode(bme, mode_normal);
+			bme280_set_mode(bme, mode_normal);
 
-			bme280_load_control_registers(bme);
+			_delay_ms(10);
+			bme280_read_control_registers(bme, stdout);
 
 			bme280_reads reads;
 			while (1) {
