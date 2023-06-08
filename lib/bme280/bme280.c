@@ -104,10 +104,12 @@ static void bme280_apply_ctrl_regs(bme280_p bme)
 	bme280_set_mode(bme, mode_sleep);
 	/* BME280_datasheet - changing bme280_ctrl_meas has to be done
 	after a change to bme280_ctrl_hum */
-	bme280_access_write(bme->acc, addr_ctrl_hum, bme->ctrl_regs.bme280_ctrl_hum.v);
+	bme280_access_write(bme->acc, addr_ctrl_hum,
+			    bme->ctrl_regs.bme280_ctrl_hum.v);
 	bme280_access_write(bme->acc, addr_ctrl_meas,
 			    bme->ctrl_regs.bme280_ctrl_meas.v);
-	bme280_access_write(bme->acc, addr_config, bme->ctrl_regs.bme280_config.v);
+	bme280_access_write(bme->acc, addr_config,
+			    bme->ctrl_regs.bme280_config.v);
 }
 
 void bme280_set_mode(bme280_p bme, bme280_mode_t mode)
@@ -117,10 +119,10 @@ void bme280_set_mode(bme280_p bme, bme280_mode_t mode)
 
 	/* BME280_datasheet - changing bme280_ctrl_meas has to be done
 	after a change to bme280_ctrl_hum */
-	bme280_access_write(bme->acc, addr_ctrl_hum, bme->ctrl_regs.bme280_ctrl_hum.v);
+	bme280_access_write(bme->acc, addr_ctrl_hum,
+			    bme->ctrl_regs.bme280_ctrl_hum.v);
 	bme280_access_write(bme->acc, addr_ctrl_meas,
 			    bme->ctrl_regs.bme280_ctrl_meas.v);
-	_delay_ms(1);
 }
 
 int bme280_set_standby(bme280_p bme, bme280_sb_t standby)
@@ -154,7 +156,7 @@ void bme280_set_osr_settings(bme280 *bme, bme280_osr_settings osr_settings)
 	LOG();
 	bme->ctrl_regs.bme280_ctrl_meas.osrs_t = osr_settings.temp;
 	bme->ctrl_regs.bme280_ctrl_meas.osrs_p = osr_settings.press;
-	bme->ctrl_regs.bme280_ctrl_hum.osrs_h	= osr_settings.hum;
+	bme->ctrl_regs.bme280_ctrl_hum.osrs_h  = osr_settings.hum;
 
 	bme280_apply_ctrl_regs(bme);
 }
@@ -162,17 +164,11 @@ void bme280_set_osr_settings(bme280 *bme, bme280_osr_settings osr_settings)
 void bme280_load_control_registers(bme280_p bme)
 {
 	LOG();
-	uint8_t regs[4];
-	bme280_access_read_n(bme->acc, addr_ctrl_hum, sizeof regs, regs);
-	bme->ctrl_regs.bme280_ctrl_hum.v = regs[0];
-	// skip status register (regs[1])
-	bme->ctrl_regs.bme280_ctrl_meas.v = regs[2];
-	bme->ctrl_regs.bme280_config.v	   = regs[3];
-
+	bme280_get_control_registers(bme, &bme->ctrl_regs);
 	bme280_print_control_registers(&bme->ctrl_regs, stdout);
 }
 
-void bme280_get_control_registers(bme280_p bme, bme280_control_registers * cr)
+void bme280_get_control_registers(bme280_p bme, bme280_control_registers *cr)
 {
 	LOG();
 	uint8_t regs[4];
@@ -237,6 +233,7 @@ typedef int32_t BME280_S32_t;
 typedef uint32_t BME280_U32_t;
 typedef int64_t BME280_S64_t;
 
+__attribute__((optimize("O3")))
 BME280_S32_t BME280_compensate_T_int32(bme280 *drv, BME280_S32_t adc_T)
 {
 	BME280_S32_t var1, var2, T;
@@ -254,6 +251,7 @@ BME280_S32_t BME280_compensate_T_int32(bme280 *drv, BME280_S32_t adc_T)
 }
 
 // Q24.8
+__attribute__((optimize("O3")))
 static BME280_U32_t BME280_compensate_P_int64(bme280 *drv, BME280_S32_t adc_P)
 {
 	BME280_S64_t var1, var2, p;
@@ -280,6 +278,7 @@ static BME280_U32_t BME280_compensate_P_int64(bme280 *drv, BME280_S32_t adc_P)
 }
 
 // return humidity in Q22.10
+__attribute__((optimize("O3")))
 static BME280_U32_t bme280_compensate_H_int32(bme280 *drv, BME280_S32_t adc_H)
 {
 	BME280_S32_t v_x1_u32r;
@@ -323,7 +322,7 @@ int bme280_read(bme280_p bme, bme280_reads *reads)
 		   ((uint32_t)read_raw[4] << 4) | ((uint32_t)read_raw[5] >> 4);
 	adc_hum = ((uint32_t)read_raw[6] << 8) | ((uint32_t)read_raw[7] << 4);
 
-	reads->pressure	   = BME280_compensate_P_int64(bme, adc_press) /256;
+	reads->pressure	   = BME280_compensate_P_int64(bme, adc_press) / 256;
 	reads->temperature = BME280_compensate_T_int32(bme, adc_temp) / 100;
 	reads->humidity	   = bme280_compensate_H_int32(bme, adc_hum) / 1024;
 

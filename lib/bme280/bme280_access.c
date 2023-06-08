@@ -65,7 +65,6 @@ void bme280_access_read_n(bme280_access_p acc, bme280_addr addr, size_t n,
 void bme280_access_write(bme280_access_p acc, bme280_addr addr,
 			 const uint8_t value)
 {
-	printf("acc: writing 0x%02x to 0x%2x\n", value, addr);
 	spi_driver_start(acc->spi_drv);
 	spi_driver_transmit(WRITE_ADDR(addr));
 	spi_driver_transmit(value);

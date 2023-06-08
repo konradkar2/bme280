@@ -99,10 +99,8 @@ uint8_t spi_driver_read()
 void spi_driver_start(spi_driver *drv)
 {
     set_low(&drv->cs_pin);
-     _delay_us(1);
 }
 void spi_driver_stop(spi_driver *drv)
 {
     set_high(&drv->cs_pin);
-    _delay_us(1);
 }
