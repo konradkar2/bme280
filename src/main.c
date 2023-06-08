@@ -5,16 +5,21 @@
 #include <pin.h>
 #include <spi.h>
 #include <string.h>
-#include <uartlib.h>
+#include <uart.h>
 #include <util/delay.h>
+
+FILE uart_output;
+FILE uart_input;
 
 int main(void)
 {
 	_delay_ms(200);
 
 	uart_init();
-	stdout = &uart_output;
-	stdin  = &uart_input;
+	uart_output = open_uart_ouput();
+	uart_input  = open_uart_ouput();
+	stdout	    = &uart_output;
+	stdin	    = &uart_input;
 
 	spi_driver spi_driver;
 	digital_pin csPin = {.dir = &DDRB, .value = &PORTB, .mask = _BV(2)};
@@ -42,7 +47,7 @@ int main(void)
 			if (bme280_set_filter(bme, filter_4)) {
 				printf("%s: failed to set filter", __func__);
 			}
-			
+
 			bme280_control_registers controlRegisters;
 			bme280_osr_settings osr_settings = {
 			    .hum = osr_skip, .press = osr_4, .temp = osr_1};
@@ -50,14 +55,16 @@ int main(void)
 
 			_delay_ms(10);
 			bme280_get_control_registers(bme, &controlRegisters);
-			bme280_print_control_registers(&controlRegisters, stdout);
+			bme280_print_control_registers(&controlRegisters,
+						       stdout);
 
 			bme280_set_mode(bme, mode_normal);
 
 			_delay_ms(10);
 			bme280_get_control_registers(bme, &controlRegisters);
-			bme280_print_control_registers(&controlRegisters, stdout);
-			
+			bme280_print_control_registers(&controlRegisters,
+						       stdout);
+
 			bme280_reads reads;
 			while (1) {
 
