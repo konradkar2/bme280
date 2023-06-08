@@ -4,23 +4,23 @@
 #include <stdio.h>
 
 /* measurement mode*/
-typedef enum mode_t {
+typedef enum bme280_mode_t {
 	mode_sleep  = 0x0,
 	mode_force = 0x1,
 	mode_normal  = 0x3,
-} mode_t;
+} bme280_mode_t;
 
 /* Oversampling mode*/
-typedef enum osr_t {
+typedef enum bme280_osr_t {
 	osr_skip = 0x0 /*disables sensor*/,
 	osr_1	 = 0x1,
 	osr_2	 = 0x2,
 	osr_4	 = 0x3,
 	osr_8	 = 0x4,
 	osr_16	 = 0x5
-} osr_t;
+} bme280_osr_t;
 
-typedef enum sb_t {
+typedef enum bme280_sb_t {
 	sb_0_5ms  = 0x0,
 	sb_65_5ms = 0x1,
 	sb_125ms  = 0x2,
@@ -29,20 +29,20 @@ typedef enum sb_t {
 	sb_1000ms = 0x5,
 	sb_10ms	  = 0x6,
 	sb_20ms	  = 0x7,
-} sb_t;
+} bme280_sb_t;
 
-typedef enum filter_t {
+typedef enum bme280_filter_t {
 	filter_off = 0x0,
 	filter_2   = 0x1,
 	filter_4   = 0x2,
 	filter_8   = 0x3,
 	filter_16  = 0x4,
-} filter_t;
+} bme280_filter_t;
 
 struct bme280_osr_settings {
-	osr_t temp;
-	osr_t press;
-	osr_t hum;
+	bme280_osr_t temp;
+	bme280_osr_t press;
+	bme280_osr_t hum;
 };
 typedef struct bme280_osr_settings bme280_osr_settings;
 
@@ -53,7 +53,7 @@ struct bme280_reads {
 };
 typedef struct bme280_reads bme280_reads;
 
-struct coefficients {
+struct bme280_coefficients {
 	/*temperature*/
 	uint16_t dig_T1;
 	int16_t dig_T2;
@@ -76,9 +76,9 @@ struct coefficients {
 	int16_t dig_H5;
 	int8_t dig_H6;
 };
-typedef struct coefficients coefficients;
+typedef struct bme280_coefficients bme280_coefficients;
 
-typedef union config {
+typedef union bme280_config {
 	uint8_t v;
 	struct {
 		uint8_t spi3w_en : 1;
@@ -86,41 +86,41 @@ typedef union config {
 		uint8_t filter : 3;
 		uint8_t t_sb : 3;
 	};
-} config;
+} bme280_config;
 
-typedef union ctrl_meas {
+typedef union bme280_ctrl_meas {
 	uint8_t v;
 	struct {
 		uint8_t mode : 2;
 		uint8_t osrs_p : 3;
 		uint8_t osrs_t : 3;
 	};
-} ctrl_meas;
+} bme280_ctrl_meas;
 
-typedef union ctrl_hum {
+typedef union bme280_ctrl_hum {
 	uint8_t v;
 	struct {
 		uint8_t osrs_h : 3;
 		uint8_t reserved : 5;
 	};
-} ctrl_hum;
+} bme280_ctrl_hum;
 
-struct control_registers {
-	config config;
-	ctrl_meas ctrl_meas;
-	ctrl_hum ctrl_hum;
+struct bme280_control_registers {
+	bme280_config bme280_config;
+	bme280_ctrl_meas bme280_ctrl_meas;
+	bme280_ctrl_hum bme280_ctrl_hum;
 };
-typedef struct control_registers control_registers;
+typedef struct bme280_control_registers bme280_control_registers;
 
-int print_config(const config *cfg, FILE *file);
-int print_ctrl_meas(const ctrl_meas *c_meas, FILE *file);
-int print_ctrl_hum(const ctrl_hum *c_hum, FILE *file);
+int bme280_print_config(const bme280_config *cfg, FILE *file);
+int bme280_print_ctrl_meas(const bme280_ctrl_meas *c_meas, FILE *file);
+int bme280_print_ctrl_hum(const bme280_ctrl_hum *c_hum, FILE *file);
 
-int print_control_registers(const control_registers *cr, FILE *file);
+int bme280_print_control_registers(const bme280_control_registers *cr, FILE *file);
 
-const char *mode_to_cstring(mode_t mode);
-const char *osr_to_cstring(osr_t osr);
-const char *sb_to_cstring(sb_t sb);
-const char *filter_to_cstring(filter_t filter);
+const char *bme280_mode_to_cstring(bme280_mode_t mode);
+const char *bme280_osr_to_cstring(bme280_osr_t osr);
+const char *bme280_sb_to_cstring(bme280_sb_t sb);
+const char *bme280_filter_to_cstring(bme280_filter_t filter);
 
 #endif

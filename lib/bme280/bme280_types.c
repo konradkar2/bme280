@@ -7,7 +7,7 @@
 	case item:                                                             \
 		return #item
 
-const char *mode_to_cstring(mode_t mode)
+const char *bme280_mode_to_cstring(bme280_mode_t mode)
 {
 	switch (mode) {
 		ENUM_CASE(mode_sleep);
@@ -17,7 +17,7 @@ const char *mode_to_cstring(mode_t mode)
 	return "undefined";
 }
 
-const char *osr_to_cstring(osr_t osr)
+const char *bme280_osr_to_cstring(bme280_osr_t osr)
 {
 	switch (osr) {
 		ENUM_CASE(osr_skip);
@@ -29,7 +29,7 @@ const char *osr_to_cstring(osr_t osr)
 	};
 	return "undefined";
 }
-const char *sb_to_cstring(sb_t sb)
+const char *bme280_sb_to_cstring(bme280_sb_t sb)
 {
 	switch (sb) {
 		ENUM_CASE(sb_0_5ms);
@@ -43,7 +43,7 @@ const char *sb_to_cstring(sb_t sb)
 	};
 	return "undefined";
 }
-const char *filter_to_cstring(filter_t filter)
+const char *bme280_filter_to_cstring(bme280_filter_t filter)
 {
 	switch (filter) {
 		ENUM_CASE(filter_off);
@@ -55,39 +55,39 @@ const char *filter_to_cstring(filter_t filter)
 	return "undefined";
 }
 
-int print_config(const config *cfg, FILE *file)
+int bme280_print_config(const bme280_config *cfg, FILE *file)
 {
-	return fprintf(file, "config: [t_sb: %s, filter: %s, spi3w_en: %s]",
-		       sb_to_cstring(cfg->t_sb), filter_to_cstring(cfg->filter),
+	return fprintf(file, "bme280_config: [t_sb: %s, filter: %s, spi3w_en: %s]",
+		       bme280_sb_to_cstring(cfg->t_sb), bme280_filter_to_cstring(cfg->filter),
 		       cfg->spi3w_en ? "true" : "false");
 }
 
-int print_ctrl_meas(const ctrl_meas *c_meas, FILE *file)
+int bme280_print_ctrl_meas(const bme280_ctrl_meas *c_meas, FILE *file)
 {
-	return fprintf(file, "ctrl_meas: [osrs_t: %s, osrs_p: %s, mode: %s]",
-		       osr_to_cstring(c_meas->osrs_t),
-		       osr_to_cstring(c_meas->osrs_p),
-		       mode_to_cstring(c_meas->mode));
+	return fprintf(file, "bme280_ctrl_meas: [osrs_t: %s, osrs_p: %s, mode: %s]",
+		       bme280_osr_to_cstring(c_meas->osrs_t),
+		       bme280_osr_to_cstring(c_meas->osrs_p),
+		       bme280_mode_to_cstring(c_meas->mode));
 }
 
-int print_ctrl_hum(const ctrl_hum *c_hum, FILE *file)
+int bme280_print_ctrl_hum(const bme280_ctrl_hum *c_hum, FILE *file)
 {
-	return fprintf(file, "ctrl_hum: [osrs_h: %s]",
-		       osr_to_cstring(c_hum->osrs_h));
+	return fprintf(file, "bme280_ctrl_hum: [osrs_h: %s]",
+		       bme280_osr_to_cstring(c_hum->osrs_h));
 }
 
-int print_control_registers(const control_registers *cr, FILE *file)
+int bme280_print_control_registers(const bme280_control_registers *cr, FILE *file)
 {
 	int res = 0;
 	res |= fprintf(file, "%s: [\n", __func__);
 
-	res |= print_config(&cr->config, file);
+	res |= bme280_print_config(&cr->bme280_config, file);
 	fprintf(file, "\n");
 
-	res |= print_ctrl_meas(&cr->ctrl_meas, file);
+	res |= bme280_print_ctrl_meas(&cr->bme280_ctrl_meas, file);
 	fprintf(file, "\n");
 	
-	res |= print_ctrl_hum(&cr->ctrl_hum, file);
+	res |= bme280_print_ctrl_hum(&cr->bme280_ctrl_hum, file);
 	fprintf(file, "\n");
 
 	res |= fprintf(file, "]");

@@ -25,7 +25,7 @@ int main(void)
 		printf("failed to alloc bme280_p");
 	} else {
 		if (bme280_reset(bme)) {
-			printf("%s: failed to reset bme280", __func__);
+			printf("%s: failed to reset bme280\n", __func__);
 		}
 		_delay_ms(10);
 		int available = bme280_is_available(bme);
@@ -43,18 +43,20 @@ int main(void)
 				printf("%s: failed to set filter", __func__);
 			}
 			
-
+			bme280_control_registers controlRegisters;
 			bme280_osr_settings osr_settings = {
 			    .hum = osr_skip, .press = osr_4, .temp = osr_1};
 			bme280_set_osr_settings(bme, osr_settings);
 
 			_delay_ms(10);
-			bme280_read_control_registers(bme, stdout);
+			bme280_get_control_registers(bme, &controlRegisters);
+			bme280_print_control_registers(&controlRegisters, stdout);
 
 			bme280_set_mode(bme, mode_normal);
 
 			_delay_ms(10);
-			bme280_read_control_registers(bme, stdout);
+			bme280_get_control_registers(bme, &controlRegisters);
+			bme280_print_control_registers(&controlRegisters, stdout);
 			
 			bme280_reads reads;
 			while (1) {
