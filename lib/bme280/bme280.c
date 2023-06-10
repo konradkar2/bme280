@@ -117,38 +117,24 @@ void bme280_set_mode(bme280_p bme, bme280_mode_t mode)
 	LOG();
 	bme->ctrl_regs.bme280_ctrl_meas.mode = mode;
 
-	/* BME280_datasheet - changing bme280_ctrl_meas has to be done
-	after a change to bme280_ctrl_hum */
 	bme280_access_write(bme->acc, addr_ctrl_hum,
 			    bme->ctrl_regs.bme280_ctrl_hum.v);
 	bme280_access_write(bme->acc, addr_ctrl_meas,
 			    bme->ctrl_regs.bme280_ctrl_meas.v);
 }
 
-int bme280_set_standby(bme280_p bme, bme280_sb_t standby)
+void bme280_set_standby(bme280_p bme, bme280_sb_t standby)
 {
 	LOG();
-	if (bme->ctrl_regs.bme280_ctrl_meas.mode == mode_normal) {
-		return 1;
-	}
-
 	bme->ctrl_regs.bme280_config.t_sb = standby;
 	bme280_apply_ctrl_regs(bme);
-
-	return 0;
 }
 
-int bme280_set_filter(bme280_p bme, bme280_filter_t filter)
+void bme280_set_filter(bme280_p bme, bme280_filter_t filter)
 {
 	LOG();
-	if (bme->ctrl_regs.bme280_ctrl_meas.mode == mode_normal) {
-		return 1;
-	}
-
 	bme->ctrl_regs.bme280_config.filter = filter;
 	bme280_apply_ctrl_regs(bme);
-
-	return 0;
 }
 
 void bme280_set_osr_settings(bme280 *bme, bme280_osr_settings osr_settings)
@@ -233,8 +219,8 @@ typedef int32_t BME280_S32_t;
 typedef uint32_t BME280_U32_t;
 typedef int64_t BME280_S64_t;
 
-__attribute__((optimize("O3")))
-BME280_S32_t BME280_compensate_T_int32(bme280 *drv, BME280_S32_t adc_T)
+__attribute__((optimize("O3"))) static BME280_S32_t
+BME280_compensate_T_int32(bme280 *drv, BME280_S32_t adc_T)
 {
 	BME280_S32_t var1, var2, T;
 	var1 = ((((adc_T >> 3) - ((BME280_S32_t)drv->coeffs->dig_T1 << 1))) *
@@ -251,8 +237,8 @@ BME280_S32_t BME280_compensate_T_int32(bme280 *drv, BME280_S32_t adc_T)
 }
 
 // Q24.8
-__attribute__((optimize("O3")))
-static BME280_U32_t BME280_compensate_P_int64(bme280 *drv, BME280_S32_t adc_P)
+__attribute__((optimize("O3"))) static BME280_U32_t
+BME280_compensate_P_int64(bme280 *drv, BME280_S32_t adc_P)
 {
 	BME280_S64_t var1, var2, p;
 	var1 = ((BME280_S64_t)drv->t_fine) - 128000;
@@ -278,8 +264,8 @@ static BME280_U32_t BME280_compensate_P_int64(bme280 *drv, BME280_S32_t adc_P)
 }
 
 // return humidity in Q22.10
-__attribute__((optimize("O3")))
-static BME280_U32_t bme280_compensate_H_int32(bme280 *drv, BME280_S32_t adc_H)
+__attribute__((optimize("O3"))) static BME280_U32_t
+bme280_compensate_H_int32(bme280 *drv, BME280_S32_t adc_H)
 {
 	BME280_S32_t v_x1_u32r;
 	v_x1_u32r = (drv->t_fine - ((BME280_S32_t)76800));

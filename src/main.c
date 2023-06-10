@@ -40,23 +40,22 @@ int main(void)
 		if (available) {
 			bme280_load_control_registers(bme);
 			bme280_load_coefficients(bme);
-			if (bme280_set_standby(bme, sb_20ms)) {
-				printf("%s: failed to set standby", __func__);
-			}
 
-			if (bme280_set_filter(bme, filter_4)) {
-				printf("%s: failed to set filter", __func__);
-			}
+			bme280_set_standby(bme, sb_20ms);
+			
+			bme280_set_filter(bme, filter_4);
 
-			bme280_control_registers controlRegisters;
 			bme280_osr_settings osr_settings = {
 			    .hum = osr_skip, .press = osr_4, .temp = osr_1};
 			bme280_set_osr_settings(bme, osr_settings);
 
 			_delay_ms(10);
+			bme280_control_registers controlRegisters;
 			bme280_get_control_registers(bme, &controlRegisters);
 			bme280_print_control_registers(&controlRegisters,
 						       stdout);
+			
+			
 
 			bme280_set_mode(bme, mode_normal);
 
