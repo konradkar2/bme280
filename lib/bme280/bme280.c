@@ -16,7 +16,7 @@
 #define BME280_RESET_VALUE (0xB6)
 
 struct bme280 {
-	bme280_access_p acc;
+	bme280_access * acc;
 	bme280_coefficients *coeffs;
 	bool coeffs_loaded;
 	int32_t t_fine;
@@ -24,7 +24,7 @@ struct bme280 {
 };
 typedef struct bme280 bme280;
 
-bme280_p bme280_init(spi_driver *spi_drv)
+bme280_p bme280_init(bme280_access *access)
 {
 	LOG();
 	bme280_p bme = malloc(sizeof(*bme));
@@ -32,7 +32,7 @@ bme280_p bme280_init(spi_driver *spi_drv)
 	if (bme) {
 		// memset(&bme->ctrl_regs, 0, sizeof(bme280_control_registers));
 		bme->coeffs_loaded = false;
-		bme->acc	   = bme280_access_init(spi_drv);
+		bme->acc	   = access;
 		if (!bme->acc) {
 			bme280_destroy(bme);
 			return NULL;

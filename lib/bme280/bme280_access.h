@@ -1,6 +1,7 @@
 #ifndef BME280_ACCESS_H
 #define BME280_ACCESS_H
 
+#include <i2c.h>
 #include <spi.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -19,14 +20,15 @@ enum bme280_addr {
 };
 typedef enum bme280_addr bme280_addr;
 
-typedef struct bme280_access *bme280_access_p;
+typedef struct bme280_access bme280_access;
 
-bme280_access_p bme280_access_init(spi_driver *spi_drv);
-void bme280_access_destroy(bme280_access_p acc);
+bme280_access *bme280_access_init_spi(spi_driver *spi_drv);
+bme280_access *bme280_access_init_i2c(i2c_driver *i2c_drv);
+void bme280_access_destroy(bme280_access *acc);
 
-void bme280_access_read8(bme280_access_p acc, bme280_addr addr, uint8_t *out);
-void bme280_access_read_n(bme280_access_p acc, bme280_addr addr, size_t n,
+void bme280_access_read8(bme280_access *acc, bme280_addr addr, uint8_t *out);
+void bme280_access_read_n(bme280_access *acc, bme280_addr addr, size_t n,
 			  uint8_t *out);
-void bme280_access_write(bme280_access_p acc, bme280_addr addr, uint8_t value);
+void bme280_access_write(bme280_access *acc, bme280_addr addr, uint8_t value);
 
 #endif

@@ -7,10 +7,11 @@
 #include <stdio.h>
 
 #include "bme280_types.h"
+#include "bme280_access.h"
 
 typedef struct bme280 *bme280_p;
 
-bme280_p bme280_init(spi_driver *spi_drv);
+bme280_p bme280_init(bme280_access * access);
 void bme280_destroy(bme280_p acc);
 
 int bme280_is_available(bme280_p bme);

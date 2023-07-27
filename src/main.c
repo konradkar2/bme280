@@ -11,6 +11,9 @@
 FILE uart_output;
 FILE uart_input;
 
+#define USE_I2C 0
+#define USE_SPI 1
+
 int main(void)
 {
 	_delay_ms(200);
@@ -21,11 +24,23 @@ int main(void)
 	stdout	    = &uart_output;
 	stdin	    = &uart_input;
 
-	spi_driver spi_driver;
-	digital_pin csPin = {.dir = &DDRB, .value = &PORTB, .mask = _BV(2)};
-	spi_driver_init(&spi_driver, csPin);
+	bme280_access *bme_access = NULL;
 
-	bme280_p bme = bme280_init(&spi_driver);
+	if (USE_SPI) {
+		static spi_driver spi_driver;
+		static digital_pin csPin = {
+		    .dir = &DDRB, .value = &PORTB, .mask = _BV(2)};
+		spi_driver_init(&spi_driver, csPin);
+		bme_access = bme280_access_init_spi(&spi_driver);
+
+	} else {
+		static i2c_driver i2c_driver;
+		i2c_driver_init(&i2c_driver, 0x76);
+		bme_access = bme280_access_init_i2c(&i2c_driver);
+	}
+
+	bme280_p bme = bme280_init(bme_access);
+
 	if (!bme) {
 		printf("failed to alloc bme280_p");
 	} else {
@@ -42,7 +57,7 @@ int main(void)
 			bme280_load_coefficients(bme);
 
 			bme280_set_standby(bme, sb_20ms);
-			
+
 			bme280_set_filter(bme, filter_4);
 
 			bme280_osr_settings osr_settings = {
@@ -54,8 +69,6 @@ int main(void)
 			bme280_get_control_registers(bme, &controlRegisters);
 			bme280_print_control_registers(&controlRegisters,
 						       stdout);
-			
-			
 
 			bme280_set_mode(bme, mode_normal);
 
