@@ -11,8 +11,7 @@
 FILE uart_output;
 FILE uart_input;
 
-#define USE_I2C 0
-#define USE_SPI 1
+#define USE_SPI 0
 
 int main(void)
 {
