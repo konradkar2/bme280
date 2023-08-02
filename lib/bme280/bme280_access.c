@@ -11,10 +11,11 @@
 #define WRITE_ADDR(addr) (addr & ~(_BV(7)))
 
 #define LOG() printf("%s\n", __func__)
-#define ASSERT_I2C_STATUS(STATUS)                                              \
+#define ASSERT_I2C_STATUS(STATUS, CLEANUP_FUNC)                                \
 	if (STATUS) {                                                          \
 		printf("%s: I2C error, status: 0x%02x\n", __func__, STATUS);   \
-		return;                                                        \
+		CLEANUP_FUNC();                                                \
+		return 1;                                                      \
 	}
 
 struct bme280_access {
@@ -55,14 +56,14 @@ void bme280_access_destroy(bme280_access *acc)
 	}
 }
 
-void bme280_access_read8(bme280_access *acc, bme280_addr addr, uint8_t *out)
+int8_t bme280_access_read8(bme280_access *acc, bme280_addr addr, uint8_t *out)
 {
 	LOG();
-	bme280_access_read_n(acc, addr, 1, out);
+	return bme280_access_read_n(acc, addr, 1, out);
 }
 
-void bme280_access_read_n(bme280_access *acc, bme280_addr addr, size_t n,
-			  uint8_t *out)
+int8_t bme280_access_read_n(bme280_access *acc, bme280_addr addr, size_t n,
+			    uint8_t *out)
 {
 	LOG();
 
@@ -80,22 +81,22 @@ void bme280_access_read_n(bme280_access *acc, bme280_addr addr, size_t n,
 		i2c_driver *i2c_drv = acc->i2c_drv;
 
 		int status = 0;
-		status	   = i2c_driver_start(i2c_drv);
-		ASSERT_I2C_STATUS(status);
+		status	   = i2c_driver_start(i2c_drv, i2c_driver_op_write);
+		ASSERT_I2C_STATUS(status, i2c_driver_stop);
 
 		status = i2c_driver_transmit(READ_ADDR(addr));
-		ASSERT_I2C_STATUS(status);
+		ASSERT_I2C_STATUS(status, i2c_driver_stop);
 
 		status = i2c_driver_read(i2c_drv, n, out);
-		ASSERT_I2C_STATUS(status);
+		ASSERT_I2C_STATUS(status, i2c_driver_stop);
 
-		status = i2c_driver_stop();
-		ASSERT_I2C_STATUS(status);
+		i2c_driver_stop();
 	}
+	return 0;
 }
 
-void bme280_access_write(bme280_access *acc, bme280_addr addr,
-			 const uint8_t value)
+int8_t bme280_access_write(bme280_access *acc, bme280_addr addr,
+			   const uint8_t value)
 {
 	if (acc->spi_drv) {
 		spi_driver_start(acc->spi_drv);
@@ -106,13 +107,16 @@ void bme280_access_write(bme280_access *acc, bme280_addr addr,
 		i2c_driver *i2c_drv = acc->i2c_drv;
 
 		int status = 0;
-		status	   = i2c_driver_start(i2c_drv);
-		ASSERT_I2C_STATUS(status);
+		status	   = i2c_driver_start(i2c_drv, i2c_driver_op_write);
+		ASSERT_I2C_STATUS(status, i2c_driver_stop);
 
 		status = i2c_driver_transmit(WRITE_ADDR(addr));
-		ASSERT_I2C_STATUS(status);
+		ASSERT_I2C_STATUS(status, i2c_driver_stop);
 
 		status = i2c_driver_transmit(value);
-		ASSERT_I2C_STATUS(status);
+		ASSERT_I2C_STATUS(status, i2c_driver_stop);
+
+		i2c_driver_stop();
 	}
+	return 0;
 }

@@ -13,16 +13,8 @@ FILE uart_input;
 
 #define USE_SPI 0
 
-int main(void)
+void routine()
 {
-	_delay_ms(200);
-
-	uart_init();
-	uart_output = open_uart_ouput();
-	uart_input  = open_uart_ouput();
-	stdout	    = &uart_output;
-	stdin	    = &uart_input;
-
 	bme280_access *bme_access = NULL;
 
 	if (USE_SPI) {
@@ -45,7 +37,9 @@ int main(void)
 	} else {
 		if (bme280_reset(bme)) {
 			printf("%s: failed to reset bme280\n", __func__);
+			return;
 		}
+
 		_delay_ms(10);
 		int available = bme280_is_available(bme);
 		printf("%s: Bme is %s!\n", __func__,
@@ -91,6 +85,19 @@ int main(void)
 			}
 		}
 	}
+}
+
+int main(void)
+{
+	_delay_ms(200);
+
+	uart_init();
+	uart_output = open_uart_ouput();
+	uart_input  = open_uart_ouput();
+	stdout	    = &uart_output;
+	stdin	    = &uart_input;
+
+	routine();
 
 	while (1) {
 		_delay_ms(500);
