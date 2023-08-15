@@ -11,12 +11,16 @@
 #define WRITE_ADDR(addr) (addr & ~(_BV(7)))
 
 #define LOG() printf("%s\n", __func__)
-#define ASSERT_I2C_STATUS(STATUS, CLEANUP_FUNC)                                \
-	if (STATUS) {                                                          \
-		printf("%s: I2C error, status: 0x%02x\n", __func__, STATUS);   \
-		CLEANUP_FUNC();                                                \
-		return 1;                                                      \
-	}
+
+#define ASSERT_I2C_STATUS(DRIVER, STATUS)                                      \
+	do {                                                                   \
+		if (STATUS) {                                                  \
+			printf("%s:%d: I2C error, status: 0x%02x\n", __func__, \
+			       __LINE__, STATUS);                              \
+			i2c_driver_stop(DRIVER);                               \
+			return 1;                                              \
+		}                                                              \
+	} while (0)
 
 struct bme280_access {
 	spi_driver *spi_drv;
@@ -82,15 +86,15 @@ int8_t bme280_access_read_n(bme280_access *acc, bme280_addr addr, size_t n,
 
 		int status = 0;
 		status	   = i2c_driver_start(i2c_drv, i2c_driver_op_write);
-		ASSERT_I2C_STATUS(status, i2c_driver_stop);
+		ASSERT_I2C_STATUS(i2c_drv, status);
 
 		status = i2c_driver_transmit(READ_ADDR(addr));
-		ASSERT_I2C_STATUS(status, i2c_driver_stop);
+		ASSERT_I2C_STATUS(i2c_drv, status);
 
 		status = i2c_driver_read(i2c_drv, n, out);
-		ASSERT_I2C_STATUS(status, i2c_driver_stop);
+		ASSERT_I2C_STATUS(i2c_drv, status);
 
-		i2c_driver_stop();
+		i2c_driver_stop(i2c_drv);
 	}
 	return 0;
 }
@@ -108,15 +112,15 @@ int8_t bme280_access_write(bme280_access *acc, bme280_addr addr,
 
 		int status = 0;
 		status	   = i2c_driver_start(i2c_drv, i2c_driver_op_write);
-		ASSERT_I2C_STATUS(status, i2c_driver_stop);
+		ASSERT_I2C_STATUS(i2c_drv, status);
 
 		status = i2c_driver_transmit(WRITE_ADDR(addr));
-		ASSERT_I2C_STATUS(status, i2c_driver_stop);
+		ASSERT_I2C_STATUS(i2c_drv, status);
 
 		status = i2c_driver_transmit(value);
-		ASSERT_I2C_STATUS(status, i2c_driver_stop);
+		ASSERT_I2C_STATUS(i2c_drv, status);
 
-		i2c_driver_stop();
+		i2c_driver_stop(i2c_drv);
 	}
 	return 0;
 }

@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <bme280.h>
 #include <bme280_access.h>
+#include <i2c_scan.h>
 #include <pin.h>
 #include <spi.h>
 #include <string.h>
@@ -25,6 +26,8 @@ void routine()
 		bme_access = bme280_access_init_spi(&spi_driver);
 
 	} else {
+
+		//i2c_scan();
 		static i2c_driver i2c_driver;
 		i2c_driver_init(&i2c_driver, 0x76);
 		bme_access = bme280_access_init_i2c(&i2c_driver);
