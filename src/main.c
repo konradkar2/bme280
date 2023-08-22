@@ -29,7 +29,7 @@ void routine()
 
 		//i2c_scan();
 		static i2c_driver i2c_driver;
-		i2c_driver_init(&i2c_driver, 0x76);
+		i2c_init(&i2c_driver, 0x76);
 		bme_access = bme280_access_init_i2c(&i2c_driver);
 	}
 
